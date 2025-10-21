@@ -1,0 +1,66 @@
+version: "3.8"
+
+services:
+  db:
+    build: ./db
+    image: mcp-postgres:local
+    container_name: mcp_db
+    hostname: db
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: appsecret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      appnet:
+        aliases:
+          - db
+
+  backend:
+    build: ./backend
+    image: mcp-backend:local
+    container_name: mcp_backend
+    hostname: backend
+    environment:
+      FLASK_ENV: production
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: appdb
+      DB_USER: appuser
+      DB_PASSWORD: appsecret
+      JWT_SECRET: supersecretjwtkeychangeme
+      JWT_EXPIRES_IN: "86400"
+    depends_on:
+      - db
+    networks:
+      appnet:
+        aliases:
+          - backend
+
+  frontend:
+    build: ./frontend
+    image: mcp-frontend:local
+    container_name: mcp_frontend
+    hostname: frontend
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8082}:80"
+    networks:
+      appnet:
+        aliases:
+          - frontend
+
+volumes:
+  pgdata:
+
+networks:
+  appnet:
+
+
