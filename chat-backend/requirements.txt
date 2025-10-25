@@ -1,0 +1,7 @@
+fastapi
+fastmcp
+langchain
+langchain-openai
+langchain-google-genai
+langchain-core
+langgraph

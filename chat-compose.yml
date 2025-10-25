@@ -1,0 +1,37 @@
+services:
+  chat-backend:
+    build: ./chat-backend
+    image: chat-backend:local
+    container_name: chat_backend
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash-latest}
+      PROMETHEUS_MCP_URL: ${PROMETHEUS_MCP_URL:-http://prometheus-mcp:8080/mcp}
+    ports:
+      - "${CHAT_BACKEND_PORT:-8083}:8000"
+    networks:
+      appnet:
+        aliases:
+          - chat-backend
+
+
+  chat-frontend:
+    build: ./chat-frontend
+    image: chat-frontend:local
+    container_name: chat_frontend
+    depends_on:
+      - chat-backend
+    ports:
+      - "${CHAT_FRONTEND_PORT:-8084}:8080"
+    networks:
+      appnet:
+        aliases:
+          - chat-frontend
+
+
+networks:
+  appnet:
+    external: true
+    name: mcp_appnet

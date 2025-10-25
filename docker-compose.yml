@@ -3,8 +3,8 @@ version: "3.8"
 services:
   db:
     build: ./db
-    image: mcp-postgres:local
-    container_name: mcp_db
+    image: postgres:local
+    container_name: db
     hostname: db
     environment:
       POSTGRES_DB: appdb
@@ -24,8 +24,8 @@ services:
 
   backend:
     build: ./backend
-    image: mcp-backend:local
-    container_name: mcp_backend
+    image: backend:local
+    container_name: backend
     hostname: backend
     environment:
       FLASK_ENV: production
@@ -45,8 +45,8 @@ services:
 
   frontend:
     build: ./frontend
-    image: mcp-frontend:local
-    container_name: mcp_frontend
+    image: frontend:local
+    container_name: frontend
     hostname: frontend
     depends_on:
       - backend
@@ -57,8 +57,72 @@ services:
         aliases:
           - frontend
 
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    hostname: cadvisor
+    ports:
+      - "${CADVISOR_PORT:-8080}:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      appnet:
+        aliases:
+          - cadvisor
+
+  prometheus:
+    build: ./prometheus
+    image: prometheus:local
+    container_name: prometheus
+    hostname: prometheus
+    depends_on:
+      - cadvisor
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=10m"
+      - "--web.enable-lifecycle"
+    networks:
+      appnet:
+        aliases:
+          - prometheus
+
+  prometheus-mcp:
+    build: ./prometheus-mcp
+    image: prometheus-mcp:local
+    container_name: prometheus_mcp
+    hostname: prometheus-mcp
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+      PROMETHEUS_MCP_SERVER_TRANSPORT: http
+      PROMETHEUS_MCP_BIND_HOST: 0.0.0.0
+      PROMETHEUS_MCP_BIND_PORT: "8080"
+    depends_on:
+      - prometheus
+    ports:
+      - "${PROMETHEUS_MCP_PORT:-8081}:8080"
+    healthcheck:
+        test: ["CMD-SHELL", "pgrep -f prometheus-mcp-server"]
+        interval: 30s
+        timeout: 5s
+        retries: 5
+        start_period: 10s
+    networks:
+      appnet:
+        aliases:
+          - prometheus-mcp
+
 volumes:
   pgdata:
+  prometheus_data:
 
 networks:
   appnet:
