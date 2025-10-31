@@ -120,6 +120,32 @@ services:
         aliases:
           - prometheus-mcp
 
+  docker-mcp:
+    build: ./docker-mcp
+    image: docker-mcp:local
+    container_name: docker_mcp
+    hostname: docker-mcp
+    ports:
+      - "${DOCKER_MCP_PORT:-8083}:8080"
+    networks:
+      appnet:
+        aliases:
+          - docker-mcp
+
+  github-mcp-server:
+    image: ghcr.io/github/github-mcp-server:latest
+    container_name: github_mcp_server
+    hostname: github-mcp-server
+    ports:
+      - "${GITHUB_MCP_PORT:-8085}:8080"
+    environment:
+      - GITHUB_TOKEN=your_github_token_here
+      - GITHUB_TOOLSETS="all"
+    networks:
+      appnet:
+        aliases:
+          - github-mcp-server
+
 volumes:
   pgdata:
   prometheus_data:
